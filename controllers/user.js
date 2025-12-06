@@ -185,17 +185,23 @@ const register = async (req, res) => {
 
     // Send welcome email via SMTP (non-blocking, real-time)
     // Fire and forget - doesn't block registration response
-    setImmediate(() => {
-      if (emailService.transporter) {
-        emailService.sendWelcomeEmail({
-          name: person.name,
-          email: person.email
-        }).catch(err => {
-          // Already handled in the function, but catch here to be safe
-          console.error('Email error (non-critical):', err.message);
-        });
-      }
-    });
+    // Wrap in try-catch to prevent any errors from breaking the response
+    try {
+      setImmediate(() => {
+        if (emailService && emailService.transporter) {
+          emailService.sendWelcomeEmail({
+            name: person.name,
+            email: person.email
+          }).catch(err => {
+            // Already handled in the function, but catch here to be safe
+            console.error('Email error (non-critical):', err.message);
+          });
+        }
+      });
+    } catch (emailError) {
+      // Email sending should never break registration
+      console.error('Email setup error (non-critical):', emailError.message);
+    }
 
     return res.status(201).json({ 
       msg: "Account created successfully! You can now log in.", 
@@ -231,14 +237,12 @@ const register = async (req, res) => {
       });
     }
 
-    // Return detailed error in development, generic in production
+    // Return error details to help debug
     return res.status(500).json({ 
       msg: "An error occurred during registration. Please try again later.",
-      error: process.env.NODE_ENV === 'development' ? {
-        message: error.message,
-        name: error.name,
-        code: error.code
-      } : undefined
+      error: error.message,
+      errorType: error.name || "UnknownError",
+      errorCode: error.code
     });
   }
 };
