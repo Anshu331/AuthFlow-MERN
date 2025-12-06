@@ -23,7 +23,8 @@
         "middleware/**",
         "models/**",
         "routes/**",
-        "utils/**"
+        "utils/**",
+        "package.json"
       ],
       "memory": 1024,
       "maxDuration": 30

@@ -4,10 +4,14 @@
 // Handle unhandled promise rejections and errors
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('Reason details:', reason?.message || reason);
+  console.error('Reason stack:', reason?.stack);
 });
 
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
+  console.error('Error message:', error.message);
+  console.error('Error stack:', error.stack);
 });
 
 let app;
@@ -17,35 +21,68 @@ let cors;
 let mainRouter;
 let initializationError = null;
 
+console.log("🔧 Starting serverless function initialization...");
+
 try {
+  console.log("Step 1: Loading dotenv...");
   require("dotenv").config();
+  console.log("✅ dotenv loaded");
+  
+  console.log("Step 2: Loading express-async-errors...");
   require('express-async-errors');
+  console.log("✅ express-async-errors loaded");
 
+  console.log("Step 3: Loading db/connect...");
   connectDB = require("../db/connect");
-  express = require("express");
-  cors = require('cors');
-  mainRouter = require("../routes/user");
+  console.log("✅ db/connect loaded");
 
+  console.log("Step 4: Loading express...");
+  express = require("express");
+  console.log("✅ express loaded");
+
+  console.log("Step 5: Loading cors...");
+  cors = require('cors');
+  console.log("✅ cors loaded");
+
+  console.log("Step 6: Loading routes/user...");
+  mainRouter = require("../routes/user");
+  console.log("✅ routes/user loaded");
+
+  console.log("Step 7: Creating Express app...");
   app = express();
+  console.log("✅ Express app created");
+  
+  console.log("✅ All dependencies loaded successfully!");
 } catch (error) {
   console.error("❌ Failed to initialize dependencies:", error);
+  console.error("Error name:", error.name);
   console.error("Error message:", error.message);
+  console.error("Error code:", error.code);
   console.error("Error stack:", error.stack);
   initializationError = error;
   
   // Create a minimal app that returns errors
   try {
+    console.log("Attempting to create minimal Express app...");
     express = require("express");
     app = express();
+    console.log("✅ Minimal Express app created");
   } catch (expressError) {
     console.error("❌ Even Express failed to load:", expressError);
+    console.error("Express error message:", expressError.message);
+    console.error("Express error stack:", expressError.stack);
     // Last resort - return a simple function
     module.exports = (req, res) => {
       res.status(500).json({
-        msg: "Critical server error",
-        error: initializationError.message
+        msg: "Critical server error - Function initialization failed",
+        error: initializationError.message,
+        errorType: initializationError.name,
+        errorCode: initializationError.code,
+        hint: "Check Vercel function logs for module loading errors"
       });
     };
+    // Exit early - don't continue
+    return;
   }
 }
 
