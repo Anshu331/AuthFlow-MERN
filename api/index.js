@@ -1,6 +1,15 @@
 // Vercel serverless function entry point
 // Wrap in try-catch to prevent function crashes
 
+// Handle unhandled promise rejections and errors
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+});
+
 let app;
 let connectDB;
 let express;
@@ -25,8 +34,19 @@ try {
   initializationError = error;
   
   // Create a minimal app that returns errors
-  express = require("express");
-  app = express();
+  try {
+    express = require("express");
+    app = express();
+  } catch (expressError) {
+    console.error("❌ Even Express failed to load:", expressError);
+    // Last resort - return a simple function
+    module.exports = (req, res) => {
+      res.status(500).json({
+        msg: "Critical server error",
+        error: initializationError.message
+      });
+    };
+  }
 }
 
 // Always set up basic middleware
@@ -120,6 +140,15 @@ if (initializationError) {
         hasFrontendUrl: !!process.env.FRONTEND_URL
       };
       
+      // Debug: Log all environment variables (values masked)
+      console.log("Environment check:", {
+        MONGO_URI: process.env.MONGO_URI ? `Set (${process.env.MONGO_URI.length} chars)` : "NOT SET",
+        JWT_SECRET: process.env.JWT_SECRET ? `Set (${process.env.JWT_SECRET.length} chars)` : "NOT SET",
+        SMTP_HOST: process.env.SMTP_HOST || "NOT SET",
+        SMTP_USER: process.env.SMTP_USER ? "Set" : "NOT SET",
+        FRONTEND_URL: process.env.FRONTEND_URL || "NOT SET"
+      });
+      
       const missingVars = [];
       if (!envCheck.hasMongoUri) missingVars.push("MONGO_URI");
       if (!envCheck.hasJwtSecret) missingVars.push("JWT_SECRET");
@@ -131,7 +160,12 @@ if (initializationError) {
           : "AuthFlow API is running - All required environment variables are set",
         database: dbStatus,
         env: envCheck,
-        missing: missingVars.length > 0 ? missingVars : undefined
+        missing: missingVars.length > 0 ? missingVars : undefined,
+        debug: {
+          mongoUriLength: process.env.MONGO_URI?.length || 0,
+          jwtSecretLength: process.env.JWT_SECRET?.length || 0,
+          nodeEnv: process.env.NODE_ENV || "not set"
+        }
       });
     } catch (error) {
       res.status(500).json({ 

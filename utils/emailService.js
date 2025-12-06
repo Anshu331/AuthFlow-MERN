@@ -40,15 +40,22 @@ class EmailService {
       try {
         this.transporter = nodemailer.createTransport(emailConfig);
         
-        // Verify connection configuration
-        this.transporter.verify((error, success) => {
-          if (error) {
-            console.error('❌ SMTP connection verification failed:', error.message);
-            console.error('   Please check your SMTP configuration in .env file');
-          } else {
-            console.log('✅ SMTP email service initialized and verified');
-            console.log(`   Host: ${emailConfig.host}:${emailConfig.port}`);
-            console.log(`   Secure: ${emailConfig.secure ? 'Yes (SSL/TLS)' : 'No (STARTTLS)'}`);
+        // Verify connection configuration (async, don't block)
+        // Use setImmediate to prevent blocking the module load
+        setImmediate(() => {
+          try {
+            this.transporter.verify((error, success) => {
+              if (error) {
+                console.error('❌ SMTP connection verification failed:', error.message);
+                console.error('   Please check your SMTP configuration in .env file');
+              } else {
+                console.log('✅ SMTP email service initialized and verified');
+                console.log(`   Host: ${emailConfig.host}:${emailConfig.port}`);
+                console.log(`   Secure: ${emailConfig.secure ? 'Yes (SSL/TLS)' : 'No (STARTTLS)'}`);
+              }
+            });
+          } catch (verifyError) {
+            console.error('❌ SMTP verification error:', verifyError.message);
           }
         });
       } catch (error) {

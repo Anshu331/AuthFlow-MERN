@@ -1,6 +1,14 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const emailService = require("../utils/emailService");
+
+// Safely require emailService - don't crash if it fails
+let emailService = null;
+try {
+  emailService = require("../utils/emailService");
+} catch (error) {
+  console.error("⚠️  Email service not available:", error.message);
+  emailService = { transporter: null };
+}
 
 const login = async (req, res) => {
   try {
@@ -187,17 +195,23 @@ const register = async (req, res) => {
     // Fire and forget - doesn't block registration response
     // Wrap in try-catch to prevent any errors from breaking the response
     try {
-      setImmediate(() => {
-        if (emailService && emailService.transporter) {
-          emailService.sendWelcomeEmail({
-            name: person.name,
-            email: person.email
-          }).catch(err => {
-            // Already handled in the function, but catch here to be safe
-            console.error('Email error (non-critical):', err.message);
-          });
-        }
-      });
+      if (emailService && typeof emailService.sendWelcomeEmail === 'function') {
+        setImmediate(() => {
+          try {
+            if (emailService.transporter) {
+              emailService.sendWelcomeEmail({
+                name: person.name,
+                email: person.email
+              }).catch(err => {
+                // Already handled in the function, but catch here to be safe
+                console.error('Email error (non-critical):', err.message);
+              });
+            }
+          } catch (emailError) {
+            console.error('Email setup error (non-critical):', emailError.message);
+          }
+        });
+      }
     } catch (emailError) {
       // Email sending should never break registration
       console.error('Email setup error (non-critical):', emailError.message);

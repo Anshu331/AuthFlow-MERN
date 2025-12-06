@@ -4,10 +4,4 @@ node_modules
 *.log
 .DS_Store
 app.js
-controllers
-db
-middleware
-models
-routes
-utils
 *.md

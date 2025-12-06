@@ -1,0 +1,10 @@
+MONGO_URI=mongodb+srv://Authflow_user:Authflow_user@3321@cluster0.ydt1vll.mongodb.net/authflow?appName=Cluster0
+JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long-1234567890
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+EMAIL_FROM_NAME=AuthFlow
+FRONTEND_URL=https://auth-flow-mern.vercel.app
+
