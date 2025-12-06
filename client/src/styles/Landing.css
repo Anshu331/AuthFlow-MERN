@@ -1,0 +1,93 @@
+.landing-main{
+  font-size: 30px;
+  height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-main::before {
+  content: '';
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: move 20s linear infinite;
+}
+
+@keyframes move {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(50px, 50px); }
+}
+
+.landing-main h1 {
+  z-index: 1;
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  margin-bottom: 16px;
+  font-size: 48px;
+  font-weight: 700;
+}
+
+.landing-main p {
+  z-index: 1;
+  color: white;
+  opacity: 0.9;
+  margin-bottom: 40px;
+  font-size: 20px;
+  font-weight: 300;
+}
+
+.landing-login-button{
+  background: white;
+  color: #667eea;
+  border: 2px solid white;
+  transition: all 0.3s ease;
+  width: 500px;
+  padding: 16px;
+  border-radius: 30px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 10px;
+  font-size: 20px;
+  text-align: center;
+  text-decoration: none;
+  z-index: 1;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+.landing-register-button{
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  transition: all 0.3s ease;
+  width: 500px;
+  padding: 16px;
+  border-radius: 30px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 10px;
+  font-size: 20px;
+  text-align: center;
+  text-decoration: none;
+  z-index: 1;
+  backdrop-filter: blur(10px);
+}
+
+.landing-register-button:hover{
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+.landing-login-button:hover{
+  background: #f8f9fa;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
