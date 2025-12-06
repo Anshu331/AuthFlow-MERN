@@ -1,13 +1,31 @@
 const express = require("express");
 const router = express.Router();
 
-const { login, register, dashboard, getAllUsers } = require("../controllers/user");
-const authMiddleware = require('../middleware/auth')
+// Wrap route handlers to catch errors
+const asyncHandler = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
 
-router.route("/login").post(login);
-router.route("/register").post(register);
-router.route("/dashboard").get(authMiddleware, dashboard);
-router.route("/users").get(getAllUsers);
+let login, register, dashboard, getAllUsers, authMiddleware;
 
+try {
+  const userController = require("../controllers/user");
+  login = userController.login;
+  register = userController.register;
+  dashboard = userController.dashboard;
+  getAllUsers = userController.getAllUsers;
+  
+  authMiddleware = require('../middleware/auth');
+  
+  console.log("✅ Routes loaded successfully");
+} catch (error) {
+  console.error("❌ Failed to load routes:", error);
+  console.error("Error stack:", error.stack);
+}
+
+router.route("/login").post(asyncHandler(login));
+router.route("/register").post(asyncHandler(register));
+router.route("/dashboard").get(authMiddleware, asyncHandler(dashboard));
+router.route("/users").get(asyncHandler(getAllUsers));
 
 module.exports = router;

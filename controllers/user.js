@@ -117,12 +117,16 @@ const getAllUsers = async (req, res) => {
 const register = async (req, res) => {
   try {
     // Log registration attempt
-    console.log("Registration attempt:", { 
-      hasUsername: !!req.body.username,
-      hasEmail: !!req.body.email,
-      hasPassword: !!req.body.password,
+    console.log("📝 Registration attempt started");
+    console.log("Request body:", {
+      username: req.body.username ? `${req.body.username.substring(0, 3)}...` : "missing",
+      email: req.body.email ? `${req.body.email.substring(0, 5)}...` : "missing",
+      hasPassword: !!req.body.password
+    });
+    console.log("Environment check:", { 
       hasMongoUri: !!process.env.MONGO_URI,
-      hasJwtSecret: !!process.env.JWT_SECRET
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      mongoUriLength: process.env.MONGO_URI?.length || 0
     });
 
     let { username, email, password } = req.body;

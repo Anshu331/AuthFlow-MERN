@@ -110,7 +110,7 @@ if (initializationError) {
       await connectDatabase();
       next();
     } catch (error) {
-      console.error("Database connection failed:", error);
+      console.error("❌ Database connection failed:", error);
       console.error("Error details:", {
         message: error.message,
         name: error.name,
@@ -119,9 +119,21 @@ if (initializationError) {
       return res.status(500).json({ 
         msg: "Database connection failed. Please check server configuration.",
         error: error.message,
-        errorType: "database_connection"
+        errorType: "database_connection",
+        debug: {
+          hasMongoUri: !!process.env.MONGO_URI,
+          mongoUriLength: process.env.MONGO_URI?.length || 0
+        }
       });
     }
+  });
+
+  // Request logging middleware (before routes)
+  app.use((req, res, next) => {
+    console.log(`📥 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+    console.log(`   Query:`, req.query);
+    console.log(`   Body keys:`, Object.keys(req.body || {}));
+    next();
   });
 
   // Mount routes
@@ -256,23 +268,25 @@ if (initializationError) {
     console.error("Error stack:", error?.stack);
     console.error("Request path:", req.path);
     console.error("Request method:", req.method);
+    console.error("Request URL:", req.url);
     
     // Don't send response if already sent
     if (res.headersSent) {
       return next(error);
     }
     
-    // In development or if error is known, provide more details
-    const isDevelopment = process.env.NODE_ENV === 'development';
+    // Always provide error details for debugging
     const errorResponse = {
       msg: "An unexpected error occurred. Please try again later.",
       error: error?.message || "Unknown error",
-      errorType: error?.name || "UnknownError"
+      errorType: error?.name || "UnknownError",
+      path: req.path,
+      method: req.method
     };
     
-    // Add stack trace in development
-    if (isDevelopment && error?.stack) {
-      errorResponse.stack = error.stack;
+    // Add stack trace for debugging (helpful even in production for Vercel)
+    if (error?.stack) {
+      errorResponse.stack = error.stack.split('\n').slice(0, 5).join('\n'); // First 5 lines
     }
     
     res.status(500).json(errorResponse);
