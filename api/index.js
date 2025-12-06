@@ -125,6 +125,12 @@ if (initializationError) {
   });
 
   // Mount routes
+  // In Vercel, when /api/(.*) is rewritten to /api/index.js,
+  // the path that reaches Express might be /v1/register (without /api prefix)
+  // So we mount at /v1, not /api/v1
+  app.use("/v1", mainRouter);
+  
+  // Also handle /api/v1 for direct access (though rewrite should handle this)
   app.use("/api/v1", mainRouter);
 
   // Health check endpoint
@@ -164,13 +170,72 @@ if (initializationError) {
         debug: {
           mongoUriLength: process.env.MONGO_URI?.length || 0,
           jwtSecretLength: process.env.JWT_SECRET?.length || 0,
-          nodeEnv: process.env.NODE_ENV || "not set"
+          nodeEnv: process.env.NODE_ENV || "not set",
+          initializationError: initializationError ? initializationError.message : null
         }
       });
     } catch (error) {
       res.status(500).json({ 
         status: "error", 
         message: error.message 
+      });
+    }
+  });
+
+  // Debug endpoint to test registration without actually registering
+  app.post("/api/v1/test-register", async (req, res) => {
+    try {
+      console.log("Test register endpoint called");
+      console.log("Request body:", req.body);
+      console.log("Environment check:", {
+        hasMongoUri: !!process.env.MONGO_URI,
+        hasJwtSecret: !!process.env.JWT_SECRET,
+        hasSmtpUser: !!process.env.SMTP_USER
+      });
+      
+      // Try to require modules
+      let modulesStatus = {
+        User: false,
+        emailService: false,
+        jwt: false
+      };
+      
+      try {
+        const User = require("../models/User");
+        modulesStatus.User = !!User;
+      } catch (e) {
+        console.error("User model error:", e.message);
+      }
+      
+      try {
+        const emailService = require("../utils/emailService");
+        modulesStatus.emailService = !!emailService;
+      } catch (e) {
+        console.error("Email service error:", e.message);
+      }
+      
+      try {
+        const jwt = require("jsonwebtoken");
+        modulesStatus.jwt = !!jwt;
+      } catch (e) {
+        console.error("JWT error:", e.message);
+      }
+      
+      res.json({
+        status: "ok",
+        message: "Test endpoint working",
+        modules: modulesStatus,
+        env: {
+          hasMongoUri: !!process.env.MONGO_URI,
+          hasJwtSecret: !!process.env.JWT_SECRET
+        }
+      });
+    } catch (error) {
+      console.error("Test endpoint error:", error);
+      res.status(500).json({
+        status: "error",
+        message: error.message,
+        stack: error.stack
       });
     }
   });
@@ -185,21 +250,32 @@ if (initializationError) {
 
   // Error handling middleware (must be last)
   app.use((error, req, res, next) => {
-    console.error("Unhandled error:", error);
+    console.error("❌ Unhandled error in middleware:", error);
     console.error("Error name:", error?.name);
     console.error("Error message:", error?.message);
     console.error("Error stack:", error?.stack);
+    console.error("Request path:", req.path);
+    console.error("Request method:", req.method);
     
     // Don't send response if already sent
     if (res.headersSent) {
       return next(error);
     }
     
-    res.status(500).json({ 
+    // In development or if error is known, provide more details
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const errorResponse = {
       msg: "An unexpected error occurred. Please try again later.",
       error: error?.message || "Unknown error",
       errorType: error?.name || "UnknownError"
-    });
+    };
+    
+    // Add stack trace in development
+    if (isDevelopment && error?.stack) {
+      errorResponse.stack = error.stack;
+    }
+    
+    res.status(500).json(errorResponse);
   });
 
   // Handle 404 for API routes

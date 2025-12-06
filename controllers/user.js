@@ -5,9 +5,17 @@ const User = require("../models/User");
 let emailService = null;
 try {
   emailService = require("../utils/emailService");
+  if (!emailService || typeof emailService.sendWelcomeEmail !== 'function') {
+    console.error("⚠️  Email service loaded but sendWelcomeEmail is not a function");
+    emailService = { transporter: null, sendWelcomeEmail: () => Promise.resolve({ success: false }) };
+  }
 } catch (error) {
   console.error("⚠️  Email service not available:", error.message);
-  emailService = { transporter: null };
+  console.error("   Error stack:", error.stack);
+  emailService = { 
+    transporter: null, 
+    sendWelcomeEmail: () => Promise.resolve({ success: false, message: 'Email service not available' })
+  };
 }
 
 const login = async (req, res) => {
@@ -222,11 +230,18 @@ const register = async (req, res) => {
       user: userResponse 
     });
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error("❌ Registration error:", error);
     console.error("Error name:", error.name);
     console.error("Error code:", error.code);
     console.error("Error message:", error.message);
     console.error("Error stack:", error.stack);
+    
+    // Log environment check
+    console.error("Environment check at error:", {
+      hasMongoUri: !!process.env.MONGO_URI,
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      nodeEnv: process.env.NODE_ENV
+    });
     
     // Handle validation errors from mongoose
     if (error.name === 'ValidationError') {
@@ -244,19 +259,32 @@ const register = async (req, res) => {
     }
 
     // Handle MongoDB connection errors
-    if (error.name === 'MongoServerError' || error.message.includes('Mongo')) {
+    if (error.name === 'MongoServerError' || error.message.includes('Mongo') || error.message.includes('connection')) {
       return res.status(500).json({ 
         msg: "Database connection error. Please try again later.",
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        errorType: "database_error"
       });
     }
 
-    // Return error details to help debug
+    // Handle module not found errors
+    if (error.code === 'MODULE_NOT_FOUND' || error.message.includes('Cannot find module')) {
+      console.error("❌ MODULE_NOT_FOUND - Missing dependency:", error.message);
+      return res.status(500).json({ 
+        msg: "Server configuration error. Please contact support.",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        errorType: "module_not_found"
+      });
+    }
+
+    // Return error details to help debug (more info in development)
+    const isDevelopment = process.env.NODE_ENV === 'development';
     return res.status(500).json({ 
       msg: "An error occurred during registration. Please try again later.",
-      error: error.message,
+      error: isDevelopment ? error.message : undefined,
       errorType: error.name || "UnknownError",
-      errorCode: error.code
+      errorCode: error.code,
+      ...(isDevelopment && error.stack ? { stack: error.stack } : {})
     });
   }
 };
