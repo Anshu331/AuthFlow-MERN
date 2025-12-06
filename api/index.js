@@ -92,12 +92,33 @@ app.get("/", (req, res) => {
   res.json({ message: "AuthFlow API", status: "running" });
 });
 
-// Error handling middleware
+// Error handling middleware (must be last)
 app.use((error, req, res, next) => {
   console.error("Unhandled error:", error);
+  console.error("Error name:", error?.name);
+  console.error("Error message:", error?.message);
+  console.error("Error stack:", error?.stack);
+  
+  // Don't send response if already sent
+  if (res.headersSent) {
+    return next(error);
+  }
+  
   res.status(500).json({ 
     msg: "An unexpected error occurred. Please try again later.",
-    error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    error: process.env.NODE_ENV === 'development' ? {
+      message: error?.message,
+      name: error?.name,
+      stack: error?.stack
+    } : undefined
+  });
+});
+
+// Handle 404 for API routes
+app.use((req, res) => {
+  res.status(404).json({ 
+    msg: "Route not found",
+    path: req.path
   });
 });
 

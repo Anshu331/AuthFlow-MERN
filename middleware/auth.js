@@ -10,6 +10,11 @@ const authenticationMiddleware = async (req, res, next) => {
   const token = authHeader.split(' ')[1]
 
   try {
+    if (!process.env.JWT_SECRET) {
+      console.error("❌ JWT_SECRET environment variable is not set");
+      return res.status(500).json({msg: "Server configuration error"});
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     const { id, name } = decoded
     req.user = { id, name }

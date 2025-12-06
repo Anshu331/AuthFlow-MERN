@@ -42,6 +42,14 @@ const login = async (req, res) => {
       });
     }
 
+    // Check if JWT_SECRET is set
+    if (!process.env.JWT_SECRET) {
+      console.error("❌ JWT_SECRET environment variable is not set");
+      return res.status(500).json({ 
+        msg: "Server configuration error. Please contact support." 
+      });
+    }
+
     // Generate token
     const token = jwt.sign(
       { id: foundUser._id, name: foundUser.name },
@@ -92,6 +100,15 @@ const getAllUsers = async (req, res) => {
 
 const register = async (req, res) => {
   try {
+    // Log registration attempt
+    console.log("Registration attempt:", { 
+      hasUsername: !!req.body.username,
+      hasEmail: !!req.body.email,
+      hasPassword: !!req.body.password,
+      hasMongoUri: !!process.env.MONGO_URI,
+      hasJwtSecret: !!process.env.JWT_SECRET
+    });
+
     let { username, email, password } = req.body;
 
     // Validate all fields are provided
@@ -186,6 +203,10 @@ const register = async (req, res) => {
     });
   } catch (error) {
     console.error("Registration error:", error);
+    console.error("Error name:", error.name);
+    console.error("Error code:", error.code);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
     
     // Handle validation errors from mongoose
     if (error.name === 'ValidationError') {
@@ -202,8 +223,22 @@ const register = async (req, res) => {
       });
     }
 
+    // Handle MongoDB connection errors
+    if (error.name === 'MongoServerError' || error.message.includes('Mongo')) {
+      return res.status(500).json({ 
+        msg: "Database connection error. Please try again later.",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+
+    // Return detailed error in development, generic in production
     return res.status(500).json({ 
-      msg: "An error occurred during registration. Please try again later." 
+      msg: "An error occurred during registration. Please try again later.",
+      error: process.env.NODE_ENV === 'development' ? {
+        message: error.message,
+        name: error.name,
+        code: error.code
+      } : undefined
     });
   }
 };
